@@ -1,0 +1,1 @@
+#define WRITE_CONFIG 8000
