@@ -1,6 +1,6 @@
 
 #include <EEPROM.h>
-void ReadConfiguration()
+void ReadConfig()
 {
   int value;
   int address = 0;

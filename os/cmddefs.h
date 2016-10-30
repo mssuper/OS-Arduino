@@ -1,1 +1,2 @@
 #define WRITE_CONFIG 8000
+#define READ_CONFIG 8001
