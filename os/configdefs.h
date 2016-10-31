@@ -6,8 +6,17 @@ struct datetimevar {
   char *data;
   char *dia;
 };
-extern configmodel *cfg;
-extern datetimevar *dtime;
+struct temp_press {
+  char *temperatura;
+  char *humidade;
+};
+
+ temp_press *dhtresult; 
+ configmodel *cfg;
+ datetimevar *dtime;
+double pressao;
 int command = 0;
 double baseline; // baseline pressure
+int commandbuffer[10];
+
 

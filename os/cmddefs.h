@@ -1,2 +1,6 @@
 #define WRITE_CONFIG 8000
 #define READ_CONFIG 8001
+#define READ_DHT 8002
+#define READ_BMP180 8003
+#define ADD_COMMAND 8004
+
