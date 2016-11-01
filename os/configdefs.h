@@ -1,4 +1,4 @@
-unsigned long OS_READ_INTERVAL = 30000; //tempo padrão de leitura de todos o equipamentos.
+unsigned int OS_READ_INTERVAL = 30; //tempo padrão de leitura de todos o equipamentos.
 
 struct datetimevar {
   char *hora;
@@ -10,12 +10,13 @@ struct temp_press {
   char *humidade;
 };
 
+int *commandbuffer= new int[16];
 temp_press *dhtresult;
 datetimevar *dtime;
 double pressao;
-int command = 0;
-double baseline; // baseline pressure
-int commandbuffer[16];
-unsigned long elaptime;
+
+
+
+
 
 
