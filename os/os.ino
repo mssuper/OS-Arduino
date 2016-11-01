@@ -12,9 +12,10 @@
 SFE_BMP180 pressure;
 DS1307 rtc(A14, A15);
 DHT dht(DHTPIN, DHTTYPE);
-Time t;
+double abstime;
 void setup() {
   // put your setup code here, to run once:
+  init_serial();
   init_rtc();
   init_bmp180();
   init_variables();
@@ -40,8 +41,10 @@ void loop() {
       addcommandtobuffer(command);
       break;
     default:
+     
       command = getcommandfrombuffer();
-      t = rtc.getTime();
+      Serial.print(command);
+      scheduler();
       break;
   }
 

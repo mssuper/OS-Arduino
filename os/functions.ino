@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 datetimevar* get_time()
 {
   datetimevar *regtime = new datetimevar;
@@ -57,6 +59,8 @@ double getPressure()
         status = pressure.getPressure(P, T);
         if (status != 0)
         {
+          Serial.print("Pressão Atmosferica: ");
+          Serial.print(P);
           return (P);
           //pressão absoluta
         }
@@ -83,17 +87,16 @@ temp_press * gettemphum()
   }
   else
   {
+   /*
     Serial.print("Umidade: ");
     Serial.print(h);
     Serial.print(" %t");
     Serial.print("Temperatura: ");
     Serial.print(t);
     Serial.println(" *C");
+    */
     char *temp = new char[10];               //temporarily holds data from vals
     char *hum = new char[10];               //temporarily holds data from vals
-
-
-
     dtostrf(t, 4, 6, temp);  //4 is mininum width, 4 is precision; float value is copied onto buff
     dtostrf(h, 4, 6, hum);  //4 is mininum width, 4 is precision; float value is copied onto buff
     temp_press *dhtresult = new temp_press;
@@ -104,20 +107,64 @@ temp_press * gettemphum()
 }
 int getcommandfrombuffer()
 {
+
   int cmd = commandbuffer[0]; //busca o primeiro da pilha de baixo para cima
-  //rotina para movimentar a pilha uma posição para baixo
+                //rotina para movimentar a pilha uma posição para baixo
   int position = 0;
-  while (position < 9)// diminui a pilha de comandos em um comando deslocando os demais comando para baixo, liberando um slot
+  while (position < 15)
   {
     commandbuffer[position] = commandbuffer[position + 1];
-    if (position == 8)
+    if (position == 14)
       commandbuffer[position+1] = 0;
     position++;
   }
-return cmd; 
+  return cmd;
 }
-
+ 
 int addcommandtobuffer(int command)
 {
-
+  int position = 0;
+  while (position <= 15)
+  {
+    if (commandbuffer[position] == 0)
+    {
+      commandbuffer[position] = command;
+      return command;
+    }
+    position++;
+  }
+  return 0;
 }
+void scheduler()
+{
+  unsigned long  tabs = millis();
+
+ unsigned long cmdtime = elaptime + OS_READ_INTERVAL;
+ unsigned long nexttime=tabs;
+ 
+ Serial.print( " \ncmdtime ");
+ Serial.print( cmdtime );
+ Serial.print( "\ntabs ");
+ Serial.print( tabs);
+ Serial.print( "\n ");
+ 
+ 
+ 
+  if (tabs > cmdtime)
+  {
+    Serial.print("\nScheduler ok ");
+    addcommandtobuffer(READ_DHT);
+    Serial.print("\nread_dht");
+    addcommandtobuffer(READ_BMP180);
+    Serial.print("\nread_BMP180");
+    Serial.print("\n"); 
+    elaptime++;   
+    elaptime = nexttime;
+    
+     Serial.print(elaptime);
+     while(true)
+     {; }
+  }
+}
+
+

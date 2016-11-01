@@ -7,13 +7,14 @@ void init_rtc()
   //Definicoes do pino SQW/Out
   rtc.setSQWRate(SQW_RATE_1);
   rtc.enableSQW(true);
-
+  Serial.print("Executa apenas uma vez");
+  elaptime = 0;
 }
 
 void init_bmp180()
 {
   pressure.begin();
-  baseline = getPressure();
+  //baseline = getPressure();
 }
 
 void init_serial() {
@@ -27,7 +28,6 @@ void init_dht()
 void init_variables()
 {
   int command = 0;
-  configmodel *cfg = new configmodel;
   datetimevar *dtime = get_time();
   temp_press *dhtresult;
   int pressao=0;
