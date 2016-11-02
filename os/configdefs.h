@@ -1,15 +1,21 @@
-struct configmodel {
-  int OS_READ_INTERVAL = 30; // intervalo de Leitura dos dispositivos
-};
+#define DEBUG_ON true // se true exibe mensagens de debug pela serial se false não
+unsigned int OS_READ_INTERVAL = 30; //tempo padrão de leitura de todos o equipamentos.
 
 struct datetimevar {
   char *hora;
   char *data;
   char *dia;
 };
-extern configmodel *cfg;
-extern datetimevar *dtime;
-int command = 0;
-double baseline; // baseline pressure
+struct temp_press {
+  char *temperatura;
+  char *humidade;
+};
+
+static int commandbuffer[16];
+temp_press *dhtresult;
+datetimevar *dtime;
+double pressao;
+
+
 
 
