@@ -13,6 +13,7 @@
   \author Marcelo Silveira.
   \since 21/09/2016
   \version 1.0.0
+
 */
 /******************************************Constantes***********************************************/
 #define DHTPIN A1 // pino que estamos conectado
@@ -153,6 +154,7 @@ void MorningAlarm()
   \since 30/09/2016
   \version 1.0.0
 */
+
 datetimevar* get_time()
 {
   datetimevar *regtime = new datetimevar;
@@ -322,3 +324,9 @@ void scheduler()
   addcommandtobuffer(READ_DHT);
   addcommandtobuffer(READ_BMP180);
 }
+
+void XBee_ReadPacket()
+{
+  
+}
+
