@@ -1,6 +1,7 @@
 #include <Printers.h>
 #include <XBee.h>
-
+#include <SD.h>
+#include <SPI.h>
 #include <Time.h>
 #include <TimeLib.h>
 #include <TimeAlarms.h>
@@ -25,7 +26,8 @@
 
 #define RTC_SDAPIN A14
 #define RTC_SCLPIN A15
-
+#define SD_PINCS 53
+#define FILENAME "datalogger.log"
 
 // Define NewSoftSerial TX/RX pins
 // Connect Arduino pin 8 to TX of usb-serial device
@@ -49,6 +51,7 @@ XBeeResponse response = XBeeResponse();
 ZBRxResponse rx = ZBRxResponse();
 ZBRxIoSampleResponse ioSample = ZBRxIoSampleResponse();
 
+
 /*! Inicialisa a Classe SoftwareSerial para comunicação com o XBee
   /*! Inicialisa a classe XBee para operação do rádio
 */
@@ -63,6 +66,20 @@ void setup() {
   */
   Serial.begin(9600);
   /******************************************inicializa a Serial***********************************************/
+
+
+  /******************************************inicializa a MicroSD***********************************************/
+  pinMode(SD_PINCS, OUTPUT);
+  // SD Card Initialization
+  if (SD.begin())
+  {
+    Serial.println("SD card is ready to use.");
+  } else
+  {
+    Serial.println("SD card initialization failed");
+    while (1);
+  }
+  /******************************************inicializa a MicroSD***********************************************/
 
   /******************************************inicializa o XBee Serial***********************************************/
   //! Inicialização da Serial
@@ -366,7 +383,7 @@ void scheduler()
   }
   addcommandtobuffer(READ_DHT);
   addcommandtobuffer(READ_BMP180);
-  
+
 }
 
 void XBee_ReadPacket()
@@ -379,7 +396,7 @@ void XBee_ReadPacket()
 
     // Read single char
     char single_character = Serial2.read();
-    if (single_character >0 )
+    if (single_character > 0 )
     {
       if (single_character == 13)
       {
@@ -624,5 +641,42 @@ void print8Bits(byte c) {
     Serial.write(nibble + 0x30);
   else
     Serial.write(nibble + 0x37);
+}
+
+void writefile(char *buffer)
+{
+  File DataLogger;
+
+  DataLogger = SD.open(FILENAME, FILE_WRITE);
+  if (DataLogger) {
+    Serial.println("Escrevendo arquivo...");
+
+    DataLogger.println(buffer);
+    DataLogger.close(); // close the file
+    Serial.println("Feito.");
+  }
+  // if the file didn't open, print an error:
+  else {
+    Serial.println("erro ao abrir " );
+  }
+}
+
+char * readfile()
+{
+  File DataLogger;
+    // Reading the file
+  DataLogger = SD.open(FILENAME);
+  if (DataLogger) {
+    Serial.println("lendo:");
+    // Reading the whole file
+    while (DataLogger.available()) {
+      Serial.write(DataLogger.read());
+   }
+    DataLogger.close();
+  }
+  else {
+    Serial.println("erro ao abrir ");
+  }
+  
 }
 
