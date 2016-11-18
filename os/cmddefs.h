@@ -3,4 +3,6 @@
 #define READ_DHT 8002
 #define READ_BMP180 8003
 #define ADD_COMMAND 8004
+#define WRITE_DATA 8005
+#define READ_TIME 8006
 
