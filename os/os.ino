@@ -39,7 +39,7 @@ SFE_BMP180 pressure;
 DS1307 rtc(RTC_SDAPIN, RTC_SCLPIN);
 DHT dht(DHTPIN, DHTTYPE);
 AlarmId Aid;
-File logfile;
+
 
 
 
@@ -69,14 +69,14 @@ void setup() {
   // or the SD library functions will not work.
 
   Serial.println("Initializing SD card...");
-
+  File logfile;
   if (!SD.begin(CSPIN)) {
     Serial.println("initialization failed!");
     return;
   }
   else
   {
-    if (!SD.exists("/DATA"))
+    if (!SD.exists("\\DATA"))
     {
       if ( SD.mkdir("/DATA") )
       {
@@ -153,8 +153,8 @@ void setup() {
   //Definicoes do pino SQW/Out
   rtc.setSQWRate(SQW_RATE_1);
 
-  
-  
+
+
   //rtc.setDOW(SUNDAY);        // Set Day-of-Week to SUNDAY
   //rtc.setTime(13, 56, 0);     // Set the time to 12:00:00 (24hr format)
   //rtc.setDate(18, 11, 2016);   // Set the date to October 3th, 2010
@@ -457,8 +457,8 @@ void writedata() {
 
   if (SD.exists(DATALOGGERFILEPATH))
   {
-    logfile = SD.open(DATALOGGERFILEPATH,FILE_WRITE);
-    if (logfile)
+    File datalogfile = SD.open(DATALOGGERFILEPATH, FILE_WRITE);
+    if (datalogfile)
     {
       Serial.println("Arquivo aberto");
 
@@ -479,9 +479,9 @@ void writedata() {
 
       sprintf (dataString, FILEFORMAT, OS_LOCATION, dtime->data, dtime->hora, resultPBar->PBar, resultPBar->Temp, dhtresult->temperatura, dhtresult->humidade);
       Serial.println(dataString);
-      logfile.println(dataString);
+      datalogfile.println(dataString);
 
-      logfile.close();
+      datalogfile.close();
     }
     else
       Serial.print("Erro ao abrir o arquivo: ");
