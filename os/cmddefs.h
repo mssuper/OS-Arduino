@@ -6,3 +6,12 @@
 #define WRITE_DATA 8005
 #define READ_TIME 8006
 
+
+
+
+
+/***********************OUTROS DEFINES**********************************
+ * 
+ */
+#define PLUVRESET 5000
+#define PLUVINC   5001

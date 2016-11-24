@@ -7,19 +7,10 @@
 #include <SFE_BMP180.h>
 #include <SPI.h>
 #include <SD.h>
-
-
-
+#include <MemoryFree.h>
 #include "cmddefs.h"
 #include "configdefs.h"
 
-//! Defines de identificaÃ§Ã£o de pinos e auxiliares
-/*! As DeclaraÃ§Ãµes que estÃ£o apresentadas abaixo identificam o equipamento e seu pino associado.
-  \author Marcelo Silveira.
-  \since 21/09/2016
-  \version 1.0.0
-
-*/
 /******************************************Constantes***********************************************/
 #define DHTPIN A1 // pino que estamos conectado
 #define DHTTYPE DHT11 // DHT 11
@@ -27,10 +18,11 @@
 #define RTC_SDAPIN A14
 #define RTC_SCLPIN A15
 #define DATALOGGERFILEPATH "/DATA/DATALOG.LOG"
-#define FILEFORMAT "%s, %s, %s, %s, %s, %s, %s"
+
+#define PLUV_PIN 3
 /******************************************Constantes***********************************************/
-//! DeclaraÃ§Ã£o de variÃ¡veis de bibliotecas
-/*! As DeclaraÃ§Ãµes que estÃ£o apresentadas abaixo sÃ£o das bibliotecas adicionadas para cada perifÃ©rico.
+//! Declaração de variáveis de bibliotecas
+/*! As Declarações que estão apresentadas abaixo são das bibliotecas adicionadas para cada periférico.
   \author Marcelo Silveira.
   \since 21/09/2016
   \version 1.0.0
@@ -38,19 +30,19 @@
 SFE_BMP180 pressure;
 DS1307 rtc(RTC_SDAPIN, RTC_SCLPIN);
 DHT dht(DHTPIN, DHTTYPE);
-AlarmId Aid;
 
+double ElapsedTime = 0;
+double pluvcounter = 0;
+float interval;
 
-
-
-/*! Inicialisa a Classe SoftwareSerial para comunicaÃ§Ã£o com o XBee
-  /*! Inicialisa a classe XBee para operaÃ§Ã£o do rÃ¡dio
+/*! Inicializa a Classe SoftwareSerial para comunicação com o XBee
+  /*! Inicialisa a classe XBee para operação do rádio
 */
 void setup() {
 
   /******************************************inicializa a Serial***********************************************/
-  //! InicializaÃ§Ã£o da Serial
-  /*! Para que a serial funcione ela deve ser iniciada na funÃ§Ã£o setup().
+  //! Inicialização da Serial
+  /*! Para que a serial funcione ela deve ser iniciada na função setup().
     \author Marcelo Silveira.
     \since 21/09/2016
     \version 1.0.0
@@ -84,7 +76,7 @@ void setup() {
         {
           Serial.print("Diretorio DATA criado com sucesso: ");
           logfile = SD.open(DATALOGGERFILEPATH, FILE_WRITE); // only open a new file if it doesn't exist
-          logfile.println("Local, Data, Hora, PBar, TempPBar, UmdEquip, TempEquip");
+          logfile.println("Local, Data, Hora, PBar, TempPBar,Pluv, UmdEquip, TempEquip");
           logfile.close();
           Serial.print("Arquivo ");
           Serial.print(DATALOGGERFILEPATH);
@@ -119,8 +111,8 @@ void setup() {
   /******************************************inicializa a MicroSD***********************************************/
 
   /******************************************inicializa o XBee Serial***********************************************/
-  //! InicializaÃ§Ã£o da Serial
-  /*! Para que a serial funcione ela deve ser iniciada na funÃ§Ã£o setup().
+  //! Inicialização da Serial
+  /*! Para que a serial funcione ela deve ser iniciada na função setup().
     \author Marcelo Silveira.
     \since 21/09/2016
     \version 1.0.0
@@ -137,36 +129,54 @@ void setup() {
 
 
 
+  /******************************************Registra variaveis do pluviometro***********************************************/
+  /*PLUV_PIN é o pino 3  para o Ard
 
+    Placas possuem pinos reservados para interrupções
+
+    Uno, Nano, Mini, other 328-based  2, 3
+    ---> Mega, Mega2560, MegaADK 2, 3, 18, 19, 20, 21
+    Micro, Leonardo, other 32u4-based 0, 1, 2, 3, 7
+    Zero  all digital pins, except 4
+    MKR1000 Rev.1 0, 1, 4, 5, 6, 7, 8, 9, A1, A2
+    Due todos os pinos digitais
+    101 todos os pinos digitais
+  */
+  pinMode(PLUV_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PLUV_PIN), CallPluvcouter, CHANGE);
+
+
+  /******************************************Registra variaveis do pluviometro***********************************************/
 
 
 
 
   /******************************************Aciona o relogio***********************************************/
-  //! InicializaÃ§Ã£o do Real Time Clock
-  /*! Nesta seÃ§Ã£o inicializa o RTC e sincroniza o relogio interno do arduino.
+  //! Inicialização do Real Time Clock
+  /*! Nesta seção inicializa o RTC e sincroniza o relogio interno do arduino.
     \author Marcelo Silveira.
     \since 22/09/2016
     \version 1.0.0
   */
+  Time  StartTime;
   rtc.halt(false);
   //Definicoes do pino SQW/Out
   rtc.setSQWRate(SQW_RATE_1);
 
 
 
-  //rtc.setDOW(SUNDAY);        // Set Day-of-Week to SUNDAY
-  //rtc.setTime(13, 56, 0);     // Set the time to 12:00:00 (24hr format)
-  //rtc.setDate(18, 11, 2016);   // Set the date to October 3th, 2010
+  //rtc.setDOW(DOMINGO);        // Set Day-of-Week to SUNDAY
+  //rtc.setTime(19, 56, 0);     // Set the time to 12:00:00 (24hr format)
+  //rtc.setDate(23, 11, 2016);   // Set the date to October 3th, 2010
 
   rtc.enableSQW(true);
-  Time timeadjust = rtc.getTime(); //busca hora do RTC
+  StartTime = rtc.getTime(); //busca hora do RTC
   //Ajusta a hora do arduino
-  setTime(timeadjust.hour, timeadjust.min, timeadjust.sec, timeadjust.mon, timeadjust.date, timeadjust.year); // set time to Saturday 8:29:00am Jan 1 2011
+  setTime(StartTime.hour, StartTime.min, StartTime.sec, StartTime.mon, StartTime.date, StartTime.year); // set time to Saturday 8:29:00am Jan 1 2011
   /******************************************Aciona o relogio***********************************************/
 
   /******************************************inicializa o BMP180***********************************************/
-  //! InicializaÃ§Ã£o do BMP180
+  //! Inicialização do BMP180
   /*! Inicializa a classe que consulta o BMP180
     \author Marcelo Silveira.
     \since 25/09/2016
@@ -175,7 +185,7 @@ void setup() {
   pressure.begin(); //inicia a classe utilizada pelo BMP180
   /******************************************inicializa o BMP180***********************************************/
   /******************************************inicializa o DHT11***********************************************/
-  //! InicializaÃ§Ã£o do DHT11
+  //! Inicialização do DHT11
   /*! Inicializa a classe que consulta o DHT11
     \author Marcelo Silveira.
     \since 24/09/2016
@@ -185,32 +195,34 @@ void setup() {
   /******************************************inicializa o DHT11***********************************************/
 
   /******************************************Demais Variaveis***********************************************/
-  //! InicializaÃ§Ã£o de variaveis  do ambiente
-  /*! Inicializa a ou resseta variaveis de inicializaÃ§Ã£o do sistema
+  //! Inicialização de variaveis  do ambiente
+  /*! Inicializa a ou resseta variaveis de inicialização do sistema
     \author Marcelo Silveira.
     \since 25/09/2016
     \version 1.0.0
   */
   //! Memset da variavel commandbuffer.
-  /*! Esta funÃ§Ã£o Ã© utilizada para  evitar o aparecimento de comandos invÃ¡lidos na inicializaÃ§Ã£o.
+  /*! Esta função é utilizada para  evitar o aparecimento de comandos inválidos na inicialização.
   */
   memset(commandbuffer, 0, sizeof(commandbuffer)); //zera todos os elementos da matriz de comandos
-  datetimevar *dtime = get_time();
-  temp_press *dhtresult;
+
+
 
   /******************************************Demais Variaveis***********************************************/
 
   //! Classe Alarm.
-  /*! para a execuÃ§Ã£o de rotinas internas foram criados dois timers um Alarm e uma trigger, um para a execuÃ§Ã£o a cada 24 hs e outro para cada OS_READ_INTERVAL.
+  /*! para a execução de rotinas internas foram criados dois timers um Alarm e uma trigger, um para a execução a cada 24 hs e outro para cada OS_READ_INTERVAL.
   */
-  Alarm.alarmRepeat(8, 30, 0, MorningAlarm); //executa funÃ§Ã£o MorningAlarm() todos os dias 8:30
-  Aid = Alarm.timerRepeat(OS_READ_INTERVAL, scheduler);// timer interno para execuÃ§Ã£o do Scheduler
+  Alarm.alarmRepeat(8, 30, 0, MorningAlarm); //executa função MorningAlarm() todos os dias 8:30
+  Alarm.timerRepeat(OS_READ_INTERVAL, scheduler);// timer interno para execução do Scheduler
+  Alarm.timerRepeat(60, ElapsedCounter);
+
   if (DEBUG_ON)
   {
     Serial.print("Setup iniciado em: ");
     Serial.println(rtc.getTimeStr());
     Serial.print("Timer iniciado ID: ");
-    Serial.println(Aid);
+
   }
 }
 
@@ -226,14 +238,11 @@ void loop() {
     case READ_CONFIG:
       ReadConfig();
       break;
-    case READ_TIME:
-      dtime = get_time();
-      break;
     case READ_DHT:
-      dhtresult = gettemphum();
+      gettemphum();
       break;
     case READ_BMP180:
-      resultPBar = getPressure();
+      getPressure();
       break;
     case ADD_COMMAND:
       addcommandtobuffer(command);
@@ -247,7 +256,7 @@ void loop() {
   Alarm.delay(0);
 }
 //! Função utilizada para executar rotinas a cada 24hs
-/*! Esta funÃ§Ã£o esta na chamada da classe Alarm
+/*! Esta função esta na chamada da classe Alarm
   \author Marcelo Silveira.
   \since 01/10/2016
   \version 1.0.0
@@ -256,34 +265,56 @@ void MorningAlarm()
 {
 
 }
-
-//! FunÃ§Ã£o utilizada para buscar o horÃ¡rio do RTC
-/*! Esta funÃ§Ã£o serÃ¡ utilizada para a recuperaÃ§Ã£o de horÃ¡rio jÃ¡ que o RTC nÃ£o altera seu horÃ¡rio independente de estar ligado ou nÃ£o
+//! Função utilizada para contar o tempo de utilização do sistema
+/*! Esta função apenas incrementa uma variavel minuto a minuto para futura conversão em horas
   \author Marcelo Silveira.
-  \since 30/09/2016
+  \since 24/11/2016
   \version 1.0.0
 */
-
-datetimevar* get_time()
+void ElapsedCounter()
 {
-  datetimevar *regtime = new datetimevar;
-  regtime->hora = rtc.getTimeStr();
-  regtime->data = rtc.getDateStr(FORMAT_SHORT);
-  regtime->dia = rtc.getDOWStr(FORMAT_SHORT);
-  return regtime;
+  ElapsedTime++;//Adiciona 1 minuto ao tempo de operação do sistema
 }
-//! FunÃ§Ã£o utilizada para buscar a pressÃ£o e temperatura do BMP180
-/*! Esta funÃ§Ã£o se utiliza da classe SFE_BMP180 para buscar dados no sensor e traduzÃ­-lo para hPa
+void CallPluvcouter()
+{
+  if (millis() > interval)
+  {
+    PluvControl(PLUVINC);
+    Serial.println("Evento Pluviometro incremento");
+    Serial.println(millis());
+
+    interval = millis() + OS_PLUVIOMETER_READ_INTERVAL;
+  }
+}
+void PluvControl(unsigned int CMD)
+{
+  switch (CMD) {
+    case PLUVRESET:
+      pluvcounter = 0;
+      break;
+    case PLUVINC:
+      pluvcounter++;
+      Serial.println(pluvcounter);
+
+      break;
+    default:
+      break;
+  }
+
+}
+
+
+
+//! Função utilizada para buscar a pressão e temperatura do BMP180
+/*! Esta função se utiliza da classe SFE_BMP180 para buscar dados no sensor e traduzi-lo para hPa
   \author Marcelo Silveira.
   \since 30/09/2016
   \version 1.0.0
 */
-TempPBar* getPressure()
+void getPressure()
 {
   char status;
-  double T, P, p0, a;
-
-
+  double T, P;
   status = pressure.startTemperature();
   if (status != 0)
   {
@@ -293,9 +324,9 @@ TempPBar* getPressure()
     status = pressure.getTemperature(T);
     if (status != 0)
     {
-      // Inicia a mediÃ§Ã£o da presasÃ£o:
-      // O parametro define a melhor amostragem, de 0 a 3 (alta resoluÃ§Ã£o, maior tempo de espera).
-      // Em caso de erro serÃ¡ retornado 0.
+      // Inicia a medição da presasão:
+      // O parametro define a melhor amostragem, de 0 a 3 (alta resolução, maior tempo de espera).
+      // Em caso de erro será retornado 0.
 
       status = pressure.startPressure(3);
       if (status != 0)
@@ -311,37 +342,34 @@ TempPBar* getPressure()
             Serial.print("Temperatura Atmosferica: ");
             Serial.println(T);
           }
-          char *temp = new char[15];               //temporarily holds data from vals
-          char *pressb = new char[15];               //temporarily holds data from vals
-          dtostrf(T, 5, 6, temp);  //4 is mininum width, 4 is precision; float value is copied onto buff
-          dtostrf(P, 5, 6, pressb);  //4 is mininum width, 4 is precision; float value is copied onto buff
-          TempPBar *result = new TempPBar;
-          result->PBar = pressb;
-          result->Temp = temp;
-          return result;
+          char str_temp[10];
+          dtostrf(P, 4, 4, str_temp);
+          sprintf(resultPBar->PBar, "%s", str_temp);
+          dtostrf(T, 4, 4, str_temp);
+          sprintf(resultPBar->Temp, "%s", str_temp);
+
         }
-        else Serial.println("Erro na leitura da mediÃ§Ã£o de pressÃ£o\n");
+        else Serial.println("Erro na leitura da medição de pressão\n");
       }
-      else Serial.println("erro ao iniciar a mediÃ§Ã£o de pressÃ£o\n");
+      else Serial.println("erro ao iniciar a medição de pressão\n");
     }
     else Serial.println("erro ao iniciar a buscar a medida da temperatura\n");
   }
-  else Serial.println("erro ao iniciar a mediÃ§Ã£o de temperatura\n");
+  else Serial.println("erro ao iniciar a medição de temperatura\n");
 }
 
-//! FunÃ§Ã£o gettemphum()
-/*! Esta funÃ§Ã£o se utiliza da classe DHT para buscar dados no sensor e traduzÃ­-lo para ÂºC e % de URA
+//! Função gettemphum()
+/*! Esta função se utiliza da classe DHT para buscar dados no sensor e traduzí-lo para ÂºC e % de URA
   \author Marcelo Silveira.
   \since 30/09/2016
   \version 1.0.0
 */
-temp_press * gettemphum()
+void gettemphum()
 {
   // A leitura da temperatura e umidade pode levar 250ms!
   // O atraso do sensor pode chegar a 2 segundos.
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-
+  double h = dht.readHumidity();
+  double t = dht.readTemperature();
   // testa se retorno Ã© valido, caso contrÃ¡rio algo estÃ¡ errado.
   if (isnan(t) || isnan(h))
   {
@@ -358,19 +386,16 @@ temp_press * gettemphum()
       Serial.print(t);
       Serial.println(" *C");
     }
-    char *temp = new char[10];               //temporarily holds data from vals
-    char *hum = new char[10];               //temporarily holds data from vals
-    dtostrf(t, 4, 6, temp);  //4 is mininum width, 4 is precision; float value is copied onto buff
-    dtostrf(h, 4, 6, hum);  //4 is mininum width, 4 is precision; float value is copied onto buff
-    temp_press *dhtresult = new temp_press;
-    dhtresult->temperatura = temp;
-    dhtresult->humidade = hum;
-    return dhtresult;
+    char str_temp[10];
+    dtostrf(t, 4, 4, str_temp);
+    sprintf(dhtresult->temperatura, "%s", str_temp);
+    dtostrf(h, 4, 4, str_temp);
+    sprintf(dhtresult->humidade, "%s", str_temp);
   }
 }
-//! FunÃ§Ã£o getcommandfrombuffer()
-/*! FunÃ§Ã£o utiliza a variavel global commandbuffer para o empilhamento de comandos este sÃ£o retornados e uma cascata Ã© feita
-  ! para colocar o proximo comando para execuÃ§Ã£o
+//! Função getcommandfrombuffer()
+/*! Função utiliza a variavel global commandbuffer para o empilhamento de comandos este são retornados e uma cascata é feita
+  ! para colocar o proximo comando para execução
   \author Marcelo Silveira.
   \since 30/09/2016
   \version 1.0.0
@@ -378,7 +403,7 @@ temp_press * gettemphum()
 int getcommandfrombuffer()
 {
   const int cmd = commandbuffer[0]; //busca o primeiro da pilha de baixo para cima
-  //rotina para movimentar a pilha uma posiÃ§Ã£o para baixo
+  //rotina para movimentar a pilha uma posição para baixo
   int position = 0;
   while (position < 14)
   {
@@ -398,14 +423,14 @@ int getcommandfrombuffer()
   }
   return cmd;
 }
-//! FunÃ§Ã£o addcommandtobuffer()
-/*! FunÃ§Ã£o utiliza a variavel global commandbuffer para o empilhamento de comandos, o comando Ã© recebido e empilhado na
-  !posiÃ§Ã£o mais alta disponivel
+//! Função addcommandtobuffer()
+/*! Função utiliza a variavel global commandbuffer para o empilhamento de comandos, o comando é recebido e empilhado na
+  !posição mais alta disponivel
   \author Marcelo Silveira.
   \since 30/09/2016
   \version 1.0.0
 */
-void addcommandtobuffer(const int command) //FunÃ§Ã£o para adiÃ§Ã£o de de comando na pilha "commandbuffer[16]"
+void addcommandtobuffer(const int command) //Função para adição de de comando na pilha "commandbuffer[16]"
 {
   int position = 0;
   while (position < 14)
@@ -425,8 +450,8 @@ void addcommandtobuffer(const int command) //FunÃ§Ã£o para adiÃ§Ã£o de d
   }
 }
 
-//! FunÃ§Ã£o scheduler()
-/*! FunÃ§Ã£o utilizada para executar rotinas internas e outras se necessÃ¡rio for
+//! Função scheduler()
+/*! Função utilizada para executar rotinas internas e outras se necessário for
   \author Marcelo Silveira.
   \since 30/09/2016
   \version 1.0.0
@@ -436,8 +461,7 @@ void scheduler()
   if (DEBUG_ON)
   {
     Serial.println("\nScheduler executado com sucesso ");
-    Serial.print("\nHorario de execucao: ");
-    Serial.println(rtc.getTimeStr());
+
   }
   addcommandtobuffer(READ_TIME);
   addcommandtobuffer(READ_DHT);
@@ -446,8 +470,8 @@ void scheduler()
 
 }
 
-//! FunÃ§Ã£o writedata()
-/*! FunÃ§Ã£o utilizada para executar rotinas internas e outras se necessÃ¡rio for
+//! Função writedata()
+/*! Função utilizada para executar rotinas internas e outras se necessário for
   \author Marcelo Silveira.
   \since 30/09/2016
   \version 1.0.0
@@ -457,6 +481,13 @@ void writedata() {
 
   if (SD.exists(DATALOGGERFILEPATH))
   {
+    Time timeread = rtc.getTime();
+    char hora[13];
+    char data[13];
+
+    memset(data, 0, sizeof(data));
+    sprintf(hora, "%02d:%02d:%02d", timeread.hour, timeread.min, timeread.sec);
+    sprintf(data, "%d-%0d-%d", timeread.date, timeread.mon,  timeread.year);
     File datalogfile = SD.open(DATALOGGERFILEPATH, FILE_WRITE);
     if (datalogfile)
     {
@@ -465,23 +496,29 @@ void writedata() {
       // if the file is available, write to it:
       // print to the serial port too:
 
-      //                    Local, Data, Hora, PBar, TempPBar, UmdEquip TempEquip
-      Serial.println(OS_LOCATION);
-      Serial.println(dtime->data);
-      Serial.println(dtime->hora);
-      Serial.println(resultPBar->PBar);
-      Serial.println(resultPBar->Temp);
-      Serial.println(dhtresult->temperatura);
-      Serial.println(dhtresult->humidade);
+      //                    Local, Data, Hora, PBar, TempPBar, Pluv,UmdEquip TempEquip
+      Serial.print("Tempo total de uso: ");
+      Serial.print(ElapsedTime / 60, 2);
+      Serial.println(" Horas de operacao");
+      Serial.print("freeMemory()=");
+      Serial.println(freeMemory());
+      Serial.print("\nHora de execucao: ");
+      Serial.println(hora);
       char dataString[256];
+      memset(dataString, 0, sizeof(dataString));
+      char str_tmp_pluv[10];
+      dtostrf(pluvcounter * OS_PLUVIOMETER_VOLUME, 3, 2, str_tmp_pluv);
 
 
 
-      sprintf (dataString, FILEFORMAT, OS_LOCATION, dtime->data, dtime->hora, resultPBar->PBar, resultPBar->Temp, dhtresult->temperatura, dhtresult->humidade);
+      //                            Local, Data, Hora, PBar, TempPBar, Pluv,UmdEquip TempEquip
+
+      sprintf (dataString, "%s, %s, %s, %s, %s, %s, %s, %s", OS_LOCATION, data, hora, resultPBar->PBar, resultPBar->Temp, str_tmp_pluv,  dhtresult->humidade, dhtresult->temperatura);
       Serial.println(dataString);
-      datalogfile.println(dataString);
+      datalogfile.println(dataString); //adiciona a linha no arquivo
 
-      datalogfile.close();
+      datalogfile.close();      //fecha o arquivo de dados
+      PluvControl(PLUVRESET); //reseta a variavel do pluviometro
     }
     else
       Serial.print("Erro ao abrir o arquivo: ");
