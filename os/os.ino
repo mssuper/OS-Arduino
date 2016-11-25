@@ -34,11 +34,17 @@ DHT dht(DHTPIN, DHTTYPE);
 double ElapsedTime = 0;
 double pluvcounter = 0;
 float interval;
+AlarmId TimerID0;
+AlarmId TimerID15;
+AlarmId TimerID60;
+AlarmId TMID;
 
 /*! Inicializa a Classe SoftwareSerial para comunicação com o XBee
   /*! Inicialisa a classe XBee para operação do rádio
 */
 void setup() {
+
+  configmodule();
 
   /******************************************inicializa a Serial***********************************************/
   //! Inicialização da Serial
@@ -214,8 +220,15 @@ void setup() {
   /*! para a execução de rotinas internas foram criados dois timers um Alarm e uma trigger, um para a execução a cada 24 hs e outro para cada OS_READ_INTERVAL.
   */
   Alarm.alarmRepeat(8, 30, 0, MorningAlarm); //executa função MorningAlarm() todos os dias 8:30
-  Alarm.timerRepeat(OS_READ_INTERVAL, scheduler);// timer interno para execução do Scheduler
+  TimerID0 = Alarm.timerRepeat(OS_READ_INTERVAL, scheduler);// // timer interno para execução do Scheduler a cada  30 Seg
+  Alarm.disable(TimerID0);
+  TimerID15 = Alarm.timerRepeat(900, scheduler);// timer interno para execução do Scheduler a cada  15 min
+  Alarm.disable(TimerID15);
+  TimerID60 = Alarm.timerRepeat(3600, scheduler);// timer interno para execução do Scheduler a cada  a cada hora cheia
+  Alarm.disable(TimerID60);
   Alarm.timerRepeat(60, ElapsedCounter);
+  TMID = Alarm.timerRepeat(1, TimerManager);
+
 
   if (DEBUG_ON)
   {
@@ -255,6 +268,35 @@ void loop() {
   }
   Alarm.delay(0);
 }
+
+void TimerManager()
+{
+  //Serial.print("Timer Manager");
+  int min = minute();
+  //Serial.println(min);
+  if (OS_READ_INTERVAL_TYPE == 0)
+  {
+    Serial.println("OS_READ_INTERVAL_TYPE =0");
+    Alarm.enable(TimerID0);
+    Alarm.disable(TMID);
+  }
+
+  if (OS_READ_INTERVAL_TYPE == 1)
+    if (min == 15 || min == 30 || min == 45)
+    {
+      Serial.println("OS_READ_INTERVAL_TYPE = 1");
+      Alarm.enable(TimerID15);
+      Alarm.disable(TMID);
+    }
+  if (OS_READ_INTERVAL_TYPE == 2)
+    if (min == 0)
+    {
+      Serial.println("OS_READ_INTERVAL_TYPE = 2");
+      Alarm.enable(TimerID60);
+      Alarm.disable(TMID);
+    }
+}
+
 //! Função utilizada para executar rotinas a cada 24hs
 /*! Esta função esta na chamada da classe Alarm
   \author Marcelo Silveira.
@@ -528,5 +570,28 @@ void writedata() {
     Serial.print("Arquivo não existe: ");
     Serial.println(DATALOGGERFILEPATH);
   }
+}
+
+void configmodule() {
+  OS_READ_INTERVAL = 30; //tempo padrão de leitura de todos o equipamentos.
+  strcpy(OS_LOCATION, "Default Location");
+  OS_READ_INTERVAL_TYPE  = 2;
+  /*                                      0 Executa as leituras no momento que ativado
+                                          1 Executa as leituras a cada quarto cheio 15 em 15 min
+                                          2 Executa as leitura na hora cheia
+  */
+  OS_PLUVIOMETER_VOLUME = 0.2;
+  OS_PLUVIOMETER_READ_INTERVAL = 1000;
+  /*OS_GPRS_ISP;
+  OS_GPRS_APN;
+  OS_GPRS_USERNAME;
+  OS_GPRS_PASSWORD;
+  OS_FTP_SERVER;
+  OS_FTP_USERNAME;
+  OS_FTP_PASSWORD;
+  OS_SMPT_SERVER;
+  OS_SMTP_USER;
+  OS_SMTP_PASSWORD;
+  */
 }
 
