@@ -24,12 +24,6 @@
 #define DATALOGGERFILEPATH "/DATA/DATALOG.LOG"
 #define S1_4_20 A4
 #define S2_4_20 A5
-#define RELAY_1_PIN 25
-#define RELAY_2_PIN 24
-#define RELAY_3_PIN 23
-#define RELAY_4_PIN 22
-
-
 #define PLUV_PIN 3
 /******************************************Constantes***********************************************/
 //! Declaração de variáveis de bibliotecas
@@ -58,16 +52,6 @@ void setup() {
   configmodule();
 
 
-/******************************************inicializa a pinos dos Relés***********************************************/
-  pinMode(RELAY_1_PIN, OUTPUT);
-  pinMode(RELAY_2_PIN, OUTPUT);
-  pinMode(RELAY_3_PIN, OUTPUT);
-  pinMode(RELAY_4_PIN, OUTPUT);
-  digitalWrite(RELAY_1_PIN, HIGH);
-  digitalWrite(RELAY_2_PIN, HIGH);
-  digitalWrite(RELAY_3_PIN, HIGH);
-  digitalWrite(RELAY_4_PIN, HIGH);
-  /******************************************inicializa a pinos dos Relés***********************************************/
 
   /******************************************inicializa a Serial***********************************************/
   //! Inicialização da Serial
@@ -284,7 +268,6 @@ void loop() {
       break;
     default:
       timerminuto = minute();
-      relayManager();
       break;
   }
   Alarm.delay(0);
@@ -596,7 +579,7 @@ void writedata() {
 }
 
 void configmodule() {
-  OS_READ_INTERVAL = 300; //tempo padrão de leitura de todos o equipamentos.
+  OS_READ_INTERVAL = 30; //tempo padrão de leitura de todos o equipamentos.
   strcpy(OS_LOCATION, "Default Location");
   OS_READ_INTERVAL_TYPE  = 0;
   /*                                      0 Executa as leituras no momento que ativado
@@ -635,100 +618,4 @@ if (S2Value >= 4)
 else
   Profundidade = 0;
   Serial.println(Profundidade);
-  if (OS_READ_INTERVAL_TYPE == 1)
-  {
-    if (timerminuto < 15)
-    {
-      relaySet(1, true, 14);
-    }
-    if (timerminuto > 15 && timerminuto < 30)
-    {
-      relaySet(1, true, 29);
-    }
-    if (timerminuto > 30 && timerminuto < 45)
-    {
-      relaySet(1, true, 44);
-    }
-    if (timerminuto > 45)
-    {
-      relaySet(1, true, 59);
-    }
-  }
-  if (OS_READ_INTERVAL_TYPE == 2)
-    relaySet(1, true, 59);
-
-  if (OS_READ_INTERVAL_TYPE == 0)
-  {
-    int startmin=LastExecutionMinute + ((OS_READ_INTERVAL / 60) - 1);
-    if (startmin == 60)
-      startmin=0;
-    relaySet(1, true, startmin);
-  }
-resetRelay(1);
-}
-
-void relaySet(int relay, bool state, int timetostart)
-{
-  switch (relay) {
-    case 1:
-      Serial.print("proxima abertura do Rele: ");
-      Serial.println(timetostart);
-      relay1time = timetostart;
-      relay1state = state;
-      break;
-    case 2:
-      relay2time = timetostart;
-      relay2state = state;
-      break;
-    case 3:
-      relay3time = timetostart;
-      relay3state = state;
-      break;
-    case 4:
-      relay4time = timetostart;
-      relay4state = state;
-      break;
-    default:
-      break;
-  }
-}
-
-void relayManager()
-{
-  //relé 1
-  if (relay1time == timerminuto)
-    if (relay1state)
-      digitalWrite(RELAY_1_PIN, LOW);
-  //relé 2
-  if (relay2time == timerminuto)
-    if (relay2state)
-      digitalWrite(RELAY_2_PIN, LOW);
-  //relé 3
-  if (relay3time == timerminuto)
-    if (relay3state)
-      digitalWrite(RELAY_3_PIN, LOW);
-  //relé 4
-  if (relay4time == timerminuto)
-    if (relay4state)
-      digitalWrite(RELAY_4_PIN, LOW);
-}
-
-void resetRelay(int relay)
-{
-  switch(relay){
-  case 1:
-    digitalWrite(RELAY_1_PIN, HIGH);
-    break;
-  case 2:
-      digitalWrite(RELAY_2_PIN, HIGH);
-      break;
-case 3:
-  digitalWrite(RELAY_3_PIN, HIGH);
-  break;
-  case 4:
-  digitalWrite(RELAY_4_PIN, HIGH);
-  break;
-  default:
-  break;
-}
 }
